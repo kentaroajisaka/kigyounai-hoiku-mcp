@@ -25,7 +25,12 @@
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
+  "author": "Kentaro Ajisaka",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kentaroajisaka/kigyounai-hoiku-mcp.git"
+  },
   "keywords": [
     "mcp",
     "childcare",
