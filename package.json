@@ -1,6 +1,6 @@
 {
   "name": "kigyounai-hoiku-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "MCP server for Japanese company-led childcare (企業主導型保育) — laws, 実施要綱, 監督基準, FAQ, 通知",
   "type": "module",
   "main": "dist/index.js",
