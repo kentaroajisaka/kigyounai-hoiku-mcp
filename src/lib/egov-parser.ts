@@ -19,7 +19,7 @@ export function extractArticle(
   lawData: EgovLawData,
   articleNum: string,
   paragraph?: number,
-  item?: number,
+  item?: string | number,
 ): { text: string; articleCaption: string } | null {
   const normalized = normalizeArticleNum(articleNum);
   const mainProvision = findNode(lawData.law_full_text, 'MainProvision');
@@ -134,13 +134,16 @@ function findParagraphNode(article: EgovNode, paragraphNum: number): EgovNode | 
   return null;
 }
 
-function findItemNode(paragraph: EgovNode, itemNum: number): EgovNode | null {
+function findItemNode(paragraph: EgovNode, itemNum: string | number): EgovNode | null {
   if (!paragraph.children) return null;
+  // parseInt 比較では枝番号の号（Num="3_2"）が 3 に潰れて指定できないため、
+  // 条文番号と同じ正規化をかけて比較する。
+  const target = normalizeArticleNum(String(itemNum));
   for (const child of paragraph.children) {
     if (typeof child === 'string') continue;
     if (child.tag === 'Item') {
       const num = child.attr?.Num;
-      if (num && parseInt(num, 10) === itemNum) return child;
+      if (num && normalizeArticleNum(num) === target) return child;
     }
   }
   return null;

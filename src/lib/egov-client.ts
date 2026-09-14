@@ -53,6 +53,33 @@ async function safeJsonParse(res: Response): Promise<unknown> {
   }
 }
 
+/** 法令名を比較用に正規化する（全角/半角・記号・空白を落として緩く比較する） */
+function normalizeLawTitle(s: string | undefined | null): string {
+  if (!s) return '';
+  return s
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/[\s、，,。．・「」『』（）()【】［］\[\]]/g, '')
+    .toLowerCase();
+}
+
+/**
+ * 検索結果が要求された法令名と一致するか確認する。
+ * e-Gov のキーワード検索は関連度の低い結果（明治期の太政官布告など）を返すことがあり、
+ * 上位1件を盲目的に採用すると、まったく無関係な法令の条文をエラーなしで返してしまう。
+ */
+function matchesRequestedLaw(
+  requestedName: string | undefined,
+  result: EgovLawSearchResult
+): boolean {
+  const title =
+    result.current_revision_info?.law_title ?? result.revision_info?.law_title;
+  if (!title || !requestedName) return false;
+  const a = normalizeLawTitle(requestedName);
+  const b = normalizeLawTitle(title);
+  if (!a || !b) return false;
+  return a.includes(b) || b.includes(a);
+}
+
 export async function fetchLawData(lawNameOrId: string): Promise<{
   data: EgovLawData;
   lawId: string;
@@ -63,14 +90,33 @@ export async function fetchLawData(lawNameOrId: string): Promise<{
 
   if (resolvedId) {
     lawId = resolvedId;
-  } else if (/^\d{3}[A-Z][A-Z0-9]\d{10}$/.test(lawNameOrId)) {
+  } else if (/^\d{3}[A-Z][A-Z0-9]{11}$/.test(lawNameOrId)) {
     lawId = lawNameOrId;
   } else {
-    const results = await searchLaws(name, 1);
+    // e-Gov の検索は完全一致ベースの順位付けを保証しないため、上位5件を取得して
+    // タイトルの包含一致で絞る。一致しなければ候補を示してエラーにする。
+    const results = await searchLaws(name, 5);
     if (results.length === 0) {
       throw new NotFoundError(`法令が見つかりません: "${name}"`);
     }
-    lawId = results[0].law_info.law_id;
+    const matched = results.find((r) => matchesRequestedLaw(name, r));
+    if (!matched) {
+      const previews = results
+        .slice(0, 3)
+        .map(
+          (r) =>
+            r.current_revision_info?.law_title ??
+            r.revision_info?.law_title ??
+            r.law_info.law_id
+        )
+        .join('; ');
+      throw new NotFoundError(
+        `法令名 "${name}" に一致する法令が見つかりませんでした。` +
+          `e-Gov 検索結果上位: ${previews}. ` +
+          `正式名称または law_id を直接指定してください。`
+      );
+    }
+    lawId = matched.law_info.law_id;
   }
 
   const cached = lawDataCache.get(lawId);

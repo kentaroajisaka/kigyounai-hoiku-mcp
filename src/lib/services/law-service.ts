@@ -39,7 +39,7 @@ export async function getLawArticle(params: {
   lawName: string;
   article: string;
   paragraph?: number;
-  item?: number;
+  item?: string | number;
 }): Promise<GetLawArticleResult> {
   const { data, lawId, lawTitle } = await fetchLawData(params.lawName);
   const egovUrl = getEgovUrl(lawId);

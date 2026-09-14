@@ -20,8 +20,8 @@ export function registerGetLawTool(server: McpServer) {
       paragraph: z.number().int().min(1).optional().describe(
         '項番号（省略時は条文全体）。例: 1, 2'
       ),
-      item: z.number().int().min(1).optional().describe(
-        '号番号（省略時は項全体）。例: 1, 2'
+      item: z.union([z.number(), z.string()]).optional().describe(
+        '号番号（省略時は項全体）。例: 1, 2。枝番号の号は文字列で指定する（例: "3の2"）'
       ),
       format: z.enum(['markdown', 'toc']).optional().describe(
         '出力形式。"markdown"=条文全文（デフォルト）, "toc"=目次のみ（トークン節約）'
